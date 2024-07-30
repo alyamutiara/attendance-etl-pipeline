@@ -1,0 +1,42 @@
+version: '3'
+
+services:
+  db:
+    image: postgres:latest
+    container_name: psql_db
+    environment:
+      POSTGRES_DB: university_db
+      POSTGRES_USER: dataengineer
+      POSTGRES_PASSWORD: secret
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dataengineer"] # check whether postgresql is ready or not
+      interval: 10s # do check every 10s
+      timeout: 5s # check timeout
+      retries: 5
+    volumes:
+      - db_data:/var/lib/postgresql/data
+
+  app:
+    container_name: etl_app
+    build:
+      context: . # use current directory
+      dockerfile: Dockerfile
+    depends_on:
+      db:
+        condition: service_healthy # ensure that the db service is already in a healthy state
+    ports:
+      - "5001:5000" # host 5001 (bcs 5000 is unavailable) to 5000 in container
+    environment:
+      - DB_HOST=psql_db
+      - DB_PORT=5432
+      - DB_USER=dataengineer
+      - DB_PASSWORD=secret
+      - DB_NAME=university_db
+    volumes:
+      - app_data:/app/data
+
+volumes:
+  db_data:
+  app_data:
